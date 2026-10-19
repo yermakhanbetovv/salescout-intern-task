@@ -1,6 +1,6 @@
 import express from "express";
 import { calculatePrice } from "../src/pricing";
-import type { Product } from "../src/types";
+import { productsSchema } from "./schema";
 
 export function createApp() {
   const app = express();
@@ -13,8 +13,19 @@ export function createApp() {
       return;
     }
 
-    const products = req.body as Product[];
-    res.json(products.map(calculatePrice));
+    const parsed = productsSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        error: "Invalid products",
+        details: parsed.error.issues.map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message,
+        })),
+      });
+      return;
+    }
+
+    res.json(parsed.data.map(calculatePrice));
   });
 
   return app;
